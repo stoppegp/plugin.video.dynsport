@@ -10,6 +10,7 @@ import xbmcaddon
 from inputstreamhelper import Helper
 from xbmcgui import ListItem
 from xbmcplugin import addDirectoryItem, endOfDirectory, setResolvedUrl
+from dateutil import parser, tz
 
 from .dynsport import DynSport, LoginError
 
@@ -100,7 +101,21 @@ def videolink(item):
     videostatus = metadata['VideoStatus']
     link = plugin.url_for(play, videoid)
     title = item['title']
-    listitem = ListItem(f"{title} [{videostatus}]")
+    if videostatus == "Scheduled":
+        #try:
+        timezone = xbmc.executeJSONRPC(
+            '{"jsonrpc": "2.0", "method": "Settings.GetSettingValue", "params": {"setting": "locale.timezone"}, "id": 1}')
+        print(timezone)
+        date = parser.parse(metadata['ScheduleStart'])
+        date_txt = date.astimezone(tz.gettz(timezone)).strftime('%c')
+        titletext = f"{title} [Scheduled: {date_txt}]"
+        #except:
+       #     titletext = f"{title} [Scheduled]"
+    elif videostatus == "Live":
+        titletext = f"{title} [B][LIVE][/B]"
+    else:
+        titletext = title
+    listitem = ListItem(titletext)
     if 'ContentDate' in metadata.keys():
         listitem.setDateTime(metadata['ContentDate'])
     if 'duration' in item.keys():
