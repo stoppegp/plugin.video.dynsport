@@ -10,7 +10,9 @@ import xbmcaddon
 from inputstreamhelper import Helper
 from xbmcgui import ListItem
 from xbmcplugin import addDirectoryItem, endOfDirectory, setResolvedUrl
-from dateutil import parser, tz
+from datetime import datetime
+from zoneinfo import ZoneInfo
+import json
 
 from .dynsport import DynSport, LoginError
 
@@ -106,8 +108,8 @@ def videolink(item):
         timezone = xbmc.executeJSONRPC(
             '{"jsonrpc": "2.0", "method": "Settings.GetSettingValue", "params": {"setting": "locale.timezone"}, "id": 1}')
         print(timezone)
-        date = parser.parse(metadata['ScheduleStart'])
-        date_txt = date.astimezone(tz.gettz(timezone)).strftime('%c')
+        date = datetime.fromisoformat(metadata['ScheduleStart'].replace("0Z", "+00:00"))
+        date_txt = date.astimezone(ZoneInfo(json.loads(timezone)['result']['value'])).strftime('%c')
         titletext = f"{title} [Scheduled: {date_txt}]"
         #except:
        #     titletext = f"{title} [Scheduled]"

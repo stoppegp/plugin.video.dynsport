@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.dynsport" name="Dyn Sport" version="0.1.0" provider-name="stoppegp">
+<addon id="plugin.video.dynsport" name="Dyn Sport" version="0.1.1" provider-name="stoppegp">
     <requires>
         <import addon="xbmc.python" version="3.0.0"/>
         <import addon="script.module.routing" version="0.2.0"/>
