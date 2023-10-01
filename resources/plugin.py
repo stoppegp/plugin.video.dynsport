@@ -71,30 +71,34 @@ def show_list_simple(list_id, page=1):
 
 @plugin.route('/api/list/<int:list_id>/<int:page>/<str:parameter>')
 def show_list(list_id, page=1, parameter=""):
-    page = int(page)
-    list = dynsport.get_list(list_id, page, parameter)
+    try:
+        page = int(page)
+        list = dynsport.get_list(list_id, page, parameter)
 
-    if "paging" in list.keys() and "total" in list["paging"].keys():
-        pages_total = list["paging"]["total"]
-    else:
-        pages_total = 1
+        if "paging" in list.keys() and "total" in list["paging"].keys():
+            pages_total = list["paging"]["total"]
+        else:
+            pages_total = 1
 
-    for entry in list['items']:
-        if entry['type'] in DynSport.PAGE_TYPES:
-            link = plugin.url_for(show_page, entry['path'])
-            title = entry['title']
-            is_directory = True
-            listitem = ListItem(title)
-            listitem.setArt(get_images(entry['images']))
-            addDirectoryItem(_handle, link, listitem, is_directory)
-        elif entry['type'] in DynSport.VIDEO_TYPES:
-            videolink(entry)
+        for entry in list['items']:
+            if entry['type'] in DynSport.PAGE_TYPES:
+                link = plugin.url_for(show_page, entry['path'])
+                title = entry['title']
+                is_directory = True
+                listitem = ListItem(title)
+                listitem.setArt(get_images(entry['images']))
+                addDirectoryItem(_handle, link, listitem, is_directory)
+            elif entry['type'] in DynSport.VIDEO_TYPES:
+                videolink(entry)
 
-    if page < pages_total:
-        addDirectoryItem(_handle, plugin.url_for(show_list, list_id, page + 1, parameter),
-                         ListItem(">>> Nächste Seite"), True)
+        if page < pages_total:
+            addDirectoryItem(_handle, plugin.url_for(show_list, list_id, page + 1, parameter),
+                             ListItem(">>> Nächste Seite"), True)
 
-    endOfDirectory(_handle)
+        endOfDirectory(_handle)
+    except Exception as e:
+        xbmc.executebuiltin(f"Notification(Dyn Sport Fehler, {str(e)})")
+        raise e
 
 
 def videolink(item):
