@@ -104,13 +104,7 @@ def videolink(item):
     link = plugin.url_for(play, videoid)
     title = item['title']
     if videostatus == "Scheduled":
-        #try:
-        timezone = xbmc.executeJSONRPC(
-            '{"jsonrpc": "2.0", "method": "Settings.GetSettingValue", "params": {"setting": "locale.timezone"}, "id": 1}')
-        print(timezone)
-        date = datetime.fromisoformat(metadata['ScheduleStart'].replace("0Z", "+00:00"))
-        date_txt = date.astimezone(ZoneInfo(json.loads(timezone)['result']['value'])).strftime('%c')
-        titletext = f"{title} [Scheduled: {date_txt}]"
+       titletext = f"{title} [Scheduled]"
         #except:
        #     titletext = f"{title} [Scheduled]"
     elif videostatus == "Live":
