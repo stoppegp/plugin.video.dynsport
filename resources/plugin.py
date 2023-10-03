@@ -2,7 +2,7 @@
 
 import logging
 import sys
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote, unquote
 
 import routing
 import xbmc
@@ -32,60 +32,88 @@ if username != "" and password != "":
     except LoginError:
         xbmc.executebuiltin("Notification(Dyn Sport, Login failed!)")
 
+
 @plugin.route('/')
 def index():
-    show_page("/")
+    directory_items = get_page_entries("/")
+    for direcotry_item in directory_items:
+        addDirectoryItem(*direcotry_item)
+    addDirectoryItem(_handle, plugin.url_for(show_search), ListItem("Search..."), True)
+    endOfDirectory(_handle)
+
+
+def get_page_entries(pagename, expand_list = False):
+    page = dynsport.get_page(pagename)
+    directory_items = []
+    for entry in page['entries']:
+        if entry['type'] in ["ListEntry"]:
+            if not expand_list:
+                if "parameter" in entry['list'].keys():
+                    parameter = quote(entry['list']['parameter'])
+                else:
+                    parameter = ""
+                link = plugin.url_for(show_list, list_id=int(entry['list']['id']), page=1, parameter=parameter)
+                if "title" in entry.keys() and entry['title'] != "":
+                    title = entry['title']
+                elif "list" in entry.keys() and "title" in entry['list'].keys():
+                    title = entry['list']['title']
+                else:
+                    title = f"List {entry['list']['id']}"
+                is_directory = True
+                ListItem(title + "test")
+                directory_items.append((_handle, link, ListItem(title), is_directory))
+            else:
+                list_entries = get_list_entries(entry['list'])
+                for list_entry in list_entries:
+                    directory_items.append(list_entry)
+        elif entry['type'] in ["ItemEntry"]:
+            directory_items.append(*videolink(entry['item']))
+    return directory_items
 
 
 @plugin.route('/api/page/<path:pagename>')
 def show_page(pagename):
-    page = dynsport.get_page(pagename)
-    for entry in page['entries']:
-        if entry['type'] in ["ListEntry"]:
-            if "parameter" in entry['list'].keys():
-                parameter = entry['list']['parameter']
-            else:
-                parameter = ""
-            link = plugin.url_for(show_list, list_id=int(entry['list']['id']), page=1, parameter=parameter)
-            if "title" in entry.keys() and entry['title'] != "":
-                title = entry['title']
-            elif "list" in entry.keys() and "title" in entry['list'].keys():
-                title = entry['list']['title']
-            else:
-                title = f"List {entry['list']['id']}"
-            is_directory = True
-            ListItem(title + "test")
-            addDirectoryItem(_handle, link, ListItem(title), is_directory)
-        elif entry['type'] in ["ItemEntry"]:
-            videolink(entry['item'])
+    directory_items = get_page_entries(pagename)
+    for direcotry_item in directory_items:
+        addDirectoryItem(*direcotry_item)
     endOfDirectory(_handle)
 
+@plugin.route('/api/search')
+def show_search():
+    keyboard = xbmc.Keyboard()
+    keyboard.doModal()
+    if (keyboard.isConfirmed()):
+        searchstring = keyboard.getText()
+        search_url = plugin.url_for(show_search_results, searchstring)
+        xbmc.executebuiltin(f"Container.Update({search_url})")
+        show_search_results(searchstring)
+
+
+@plugin.route('/api/searchresults/<q>')
+def show_search_results(q):
+    directory_items = get_page_entries(f"/search_results?q={q}", True)
+    for direcotry_item in directory_items:
+        addDirectoryItem(*direcotry_item)
+    endOfDirectory(_handle)
 
 @plugin.route('/api/list/<list_id>/<page>')
 def show_list_simple(list_id, page=1):
     show_list(list_id, page, "")
 
 
-@plugin.route('/api/list/<int:list_id>/<int:page>/<str:parameter>')
+@plugin.route('/api/list/<list_id>/<page>/<parameter>')
 def show_list(list_id, page=1, parameter=""):
     page = int(page)
-    list = dynsport.get_list(list_id, page, parameter)
+    list = dynsport.get_list(list_id, page, unquote(parameter))
 
     if "paging" in list.keys() and "total" in list["paging"].keys():
         pages_total = list["paging"]["total"]
     else:
         pages_total = 1
 
-    for entry in list['items']:
-        if entry['type'] in DynSport.PAGE_TYPES:
-            link = plugin.url_for(show_page, entry['path'])
-            title = entry['title']
-            is_directory = True
-            listitem = ListItem(title)
-            listitem.setArt(get_images(entry['images']))
-            addDirectoryItem(_handle, link, listitem, is_directory)
-        elif entry['type'] in DynSport.VIDEO_TYPES:
-            videolink(entry)
+    list_entries = get_list_entries(list)
+    for list_entry in list_entries:
+        addDirectoryItem(*list_entry)
 
     if page < pages_total:
         addDirectoryItem(_handle, plugin.url_for(show_list, list_id, page + 1, parameter),
@@ -93,6 +121,19 @@ def show_list(list_id, page=1, parameter=""):
 
     endOfDirectory(_handle)
 
+def get_list_entries(list):
+    list_entries = []
+    for entry in list['items']:
+        if entry['type'] in DynSport.PAGE_TYPES:
+            link = plugin.url_for(show_page, entry['path'])
+            title = entry['title']
+            is_directory = True
+            listitem = ListItem(title)
+            listitem.setArt(get_images(entry['images']))
+            list_entries.append((_handle, link, listitem, is_directory))
+        elif entry['type'] in DynSport.VIDEO_TYPES:
+            list_entries.append(videolink(entry))
+    return list_entries
 
 def videolink(item):
     metadata = {x['name']: x['value'] for x in item['customMetadata']}
@@ -101,9 +142,9 @@ def videolink(item):
     link = plugin.url_for(play, videoid)
     title = item['title']
     if videostatus == "Scheduled":
-       titletext = f"{title} [Scheduled]"
-        #except:
-       #     titletext = f"{title} [Scheduled]"
+        titletext = f"{title} [Scheduled]"
+        # except:
+        #     titletext = f"{title} [Scheduled]"
     elif videostatus == "Live":
         titletext = f"{title} [B][LIVE][/B]"
     else:
@@ -115,7 +156,7 @@ def videolink(item):
         listitem.addStreamInfo('video', {'duration': item['duration']})
     listitem.setProperty('IsPlayable', 'true')
     listitem.setArt(get_images(item['images']))
-    addDirectoryItem(_handle, link, listitem, False)
+    return _handle, link, listitem, False
 
 
 def get_images(images):
@@ -145,7 +186,7 @@ def play(videoid):
         play_item.setProperty('inputstream', is_helper.inputstream_addon)
     else:
         play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
-    #play_item.setProperty('inputstream', 'inputstream.adaptive')
+    # play_item.setProperty('inputstream', 'inputstream.adaptive')
     play_item.setProperty('inputstream.adaptive.manifest_type', protocol)
     play_item.setProperty('inputstream.adaptive.license_type', license_type)
 
@@ -171,6 +212,7 @@ def play(videoid):
         setResolvedUrl(_handle, True, listitem=play_item)
     except LoginError:
         xbmc.executebuiltin("Notification(Dyn Sport, Not logged in!)")
+
 
 def run():
     plugin.run()
