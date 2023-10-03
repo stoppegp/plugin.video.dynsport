@@ -10,9 +10,6 @@ import xbmcaddon
 from inputstreamhelper import Helper
 from xbmcgui import ListItem
 from xbmcplugin import addDirectoryItem, endOfDirectory, setResolvedUrl
-from datetime import datetime
-from zoneinfo import ZoneInfo
-import json
 
 from .dynsport import DynSport, LoginError
 
