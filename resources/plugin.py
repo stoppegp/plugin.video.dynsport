@@ -150,8 +150,6 @@ def videolink(item):
     else:
         titletext = title
     listitem = ListItem(titletext)
-    if 'ContentDate' in metadata.keys():
-        listitem.setDateTime(metadata['ContentDate'])
     if 'duration' in item.keys():
         listitem.addStreamInfo('video', {'duration': item['duration']})
     listitem.setProperty('IsPlayable', 'true')
