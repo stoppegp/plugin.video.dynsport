@@ -153,6 +153,7 @@ def videolink(item):
     if 'duration' in item.keys():
         listitem.addStreamInfo('video', {'duration': item['duration']})
     listitem.setProperty('IsPlayable', 'true')
+    listitem.setProperty('Date', '20230101')
     listitem.setArt(get_images(item['images']))
     return _handle, link, listitem, False
 
@@ -175,41 +176,42 @@ def play(videoid):
 
     is_helper = Helper(protocol, drm=license_type)
 
-    videodata = dynsport.get_video(videoid)
-    lic_url = videodata['drm']['widevine']['licenseUrl']
+    if is_helper.check_inputstream():
+        videodata = dynsport.get_video(videoid)
+        lic_url = videodata['drm']['widevine']['licenseUrl']
 
-    play_item = ListItem(path=videodata['uri'])
+        play_item = ListItem(path=videodata['uri'])
 
-    if KODI_VERSION_MAJOR >= 19:
-        play_item.setProperty('inputstream', is_helper.inputstream_addon)
-    else:
-        play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
-    # play_item.setProperty('inputstream', 'inputstream.adaptive')
-    play_item.setProperty('inputstream.adaptive.manifest_type', protocol)
-    play_item.setProperty('inputstream.adaptive.license_type', license_type)
+        if KODI_VERSION_MAJOR >= 19:
+            play_item.setProperty('inputstream', is_helper.inputstream_addon)
+        else:
+            play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
+        # play_item.setProperty('inputstream', 'inputstream.adaptive')
+        play_item.setProperty('inputstream.adaptive.manifest_type', protocol)
+        play_item.setProperty('inputstream.adaptive.license_type', license_type)
 
-    try:
-        video_auth = dynsport.get_video_auth(videoid, videodata)
+        try:
+            video_auth = dynsport.get_video_auth(videoid, videodata)
 
-        license_headers = {
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/116.0',
-            'Content-Type': 'application/octet-stream',
-            'Origin': 'https://www.dyn.sport',
-            'x-dt-auth-token': video_auth,
-            'Host': 'lic.drmtoday.com'
-        }
+            license_headers = {
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/116.0',
+                'Content-Type': 'application/octet-stream',
+                'Origin': 'https://www.dyn.sport',
+                'x-dt-auth-token': video_auth,
+                'Host': 'lic.drmtoday.com'
+            }
 
-        license_config = {
-            'license_server_url': lic_url.replace("specConform=true", ""),
-            'headers': urlencode(license_headers),
-            'post_data': 'R{SSM}',
-            'response_data': 'JBlicense'
-        }
-        play_item.setProperty('inputstream.adaptive.license_key', '|'.join(license_config.values()))
+            license_config = {
+                'license_server_url': lic_url.replace("specConform=true", ""),
+                'headers': urlencode(license_headers),
+                'post_data': 'R{SSM}',
+                'response_data': 'JBlicense'
+            }
+            play_item.setProperty('inputstream.adaptive.license_key', '|'.join(license_config.values()))
 
-        setResolvedUrl(_handle, True, listitem=play_item)
-    except LoginError:
-        xbmc.executebuiltin("Notification(Dyn Sport, Not logged in!)")
+            setResolvedUrl(_handle, True, listitem=play_item)
+        except LoginError:
+            xbmc.executebuiltin("Notification(Dyn Sport, Not logged in!)")
 
 
 def run():
