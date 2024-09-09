@@ -77,17 +77,19 @@ class DynSport:
         data = {"Type": 1,
                 "VideoId": videoid,
                 "VideoSource": videodata['uri'],
-                "VideoKind": "replay", "AssetState": "3", "PlayerType": "HTML5", "VideoSourceFormat": "DASH",
+                "PlayerType": "HTML5", "VideoSourceFormat": "DASH",
                 "VideoSourceName": videodata['name'], "DRMType": "widevine", "AuthType": "Token",
                 "ContentKeyData": videodata['drm']['widevine']['contentKeyData'],
-                "Other": "48d46ad7-ddf7-4c23-bd85-d3f4de6d0b92|web_browser"}
+                "Other": "dummy|web_browser||||dummy|dummy|dummy|||", "SessionId": "dummy"}
         if self.subscribed:
             data["User"] = self.useraccount_token
         r = self.session.post(url, json=data)
         try:
+            print(r.json())
             authtoken = r.json()['AuthToken']
+            content_url = r.json()['ContentUrl']
             if authtoken == "":
                 raise LoginError()
-            return authtoken
+            return content_url, authtoken
         except:
             raise LoginError()

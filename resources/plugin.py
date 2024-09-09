@@ -178,20 +178,22 @@ def play(videoid):
 
     if is_helper.check_inputstream():
         videodata = dynsport.get_video(videoid)
-        lic_url = videodata['drm']['widevine']['licenseUrl']
-
-        play_item = ListItem(path=videodata['uri'])
-
-        if KODI_VERSION_MAJOR >= 19:
-            play_item.setProperty('inputstream', is_helper.inputstream_addon)
-        else:
-            play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
-        # play_item.setProperty('inputstream', 'inputstream.adaptive')
-        play_item.setProperty('inputstream.adaptive.manifest_type', protocol)
-        play_item.setProperty('inputstream.adaptive.license_type', license_type)
 
         try:
-            video_auth = dynsport.get_video_auth(videoid, videodata)
+
+            lic_url = videodata['drm']['widevine']['licenseUrl']
+
+            content_url, video_auth = dynsport.get_video_auth(videoid, videodata)
+
+            play_item = ListItem(path=content_url)
+
+            if KODI_VERSION_MAJOR >= 19:
+                play_item.setProperty('inputstream', is_helper.inputstream_addon)
+            else:
+                play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
+            # play_item.setProperty('inputstream', 'inputstream.adaptive')
+            play_item.setProperty('inputstream.adaptive.manifest_type', protocol)
+            play_item.setProperty('inputstream.adaptive.license_type', license_type)
 
             license_headers = {
                 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/116.0',
